@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Busca CFOP - SupraTech</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f9f9f9;
+      color: #333;
+      padding: 20px;
+    }
+
+    #results {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      padding: 15px 20px;
+      transition: box-shadow 0.3s ease;
+    }
+
+    #results div:hover {
+      background: rgba(108, 67, 208, 0.05);
+      transform: translateX(3px);
+      transition: all 0.2s ease;
+    }
+
+    #search:focus {
+      outline: none;
+      border-color: #6C43D0;
+      box-shadow: 0 0 6px rgba(108, 67, 208, 0.9);
+    }
+
+    #pagination button:not(:disabled):hover img {
+      transform: scale(1.15);
+      filter: brightness(1.2);
+      transition: all 0.2s ease;
+    }
+
+    #pagination span {
+      font-weight: 500;
+      color: #6C43D0;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-bottom: 15px;
+    }
+
+    button {
+      background: #6C43D0;
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #532f9e;
+    }
+
+    #results div {
+      padding: 6px;
+      border-bottom: 1px solid #eee;
+    }
+
+    #controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+<div style="max-width:800px;margin:auto;padding:20px;font-family:sans-serif;">
+  <h2 style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:22px;">🔍</span> Buscar CFOP
+  </h2>
+  <input id="search" type="text" placeholder="Digite o CFOP ou parte da descrição..." />
+
+  <div id="results"></div>
+
+  <div id="pagination" style="display:flex;justify-content:center;align-items:center;margin-top:20px;gap:10px;">
+    <button id="prev" disabled>
+      <img src="https://supratechsistemas.com.br/wp-content/uploads/2025/11/seta-esquerda.png" alt="Anterior" style="width:24px;height:24px;opacity:0.6;">
+    </button>
+
+    <span id="pageIndicator">Página 1</span>
+
+    <button id="next">
+      <img src="https://supratechsistemas.com.br/wp-content/uploads/2025/11/seta-direita.png" alt="Próximo" style="width:24px;height:24px;opacity:1;">
+    </button>
+  </div>
+</div>
+
+<script>
+  // ===============================
+  // 📘 Função para normalizar texto
+  // ===============================
+  function normalizeText(txt) {
+    return txt
+      .toString()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^\w\s]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  // ===============================
+  // 🧩 Lista de CFOPs (resumida p/ teste)
+  // ===============================
+  const cfops = [
+    { "Tabela de CFOP": "1.101", "Descrição": "Compra para industrialização ou produção rural" },
+    { "Tabela de CFOP": "1.102", "Descrição": "Compra para comercialização" },
+    { "Tabela de CFOP": "5.101", "Descrição": "Venda de produção do estabelecimento" },
+    { "Tabela de CFOP": "5.102", "Descrição": "Venda de mercadoria adquirida ou recebida de terceiros" },
+    { "Tabela de CFOP": "6.101", "Descrição": "Venda de produção do estabelecimento (interestadual)" },
+    { "Tabela de CFOP": "6.102", "Descrição": "Venda de mercadoria adquirida ou recebida de terceiros (interestadual)" },
+    { "Tabela de CFOP": "7.101", "Descrição": "Venda de produção do estabelecimento (exterior)" },
+    { "Tabela de CFOP": "7.102", "Descrição": "Venda de mercadoria adquirida ou recebida de terceiros (exterior)" }
+  ];
+
+  // ===============================
+  // 🔎 Função de busca e paginação
+  // ===============================
+  const resultsDiv = document.getElementById("results");
+  const searchInput = document.getElementById("search");
+  const prevBtn = document.getElementById("prev");
+  const nextBtn = document.getElementById("next");
+  const pageIndicator = document.getElementById("pageIndicator");
+
+  let currentPage = 1;
+  const itemsPerPage = 10;
+  let filteredCFOPs = cfops;
+
+  function displayResults() {
+    resultsDiv.innerHTML = "";
+
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const pageItems = filteredCFOPs.slice(start, end);
+
+    if (pageItems.length === 0) {
+      resultsDiv.innerHTML = "<p>Nenhum CFOP encontrado.</p>";
+    } else {
+      pageItems.forEach(cfop => {
+        const itemDiv = document.createElement("div");
+        itemDiv.innerHTML = `<strong>${cfop["Tabela de CFOP"]}</strong> - ${cfop["Descrição"]}`;
+        resultsDiv.appendChild(itemDiv);
+      });
+    }
+
+    pageIndicator.textContent = `Página ${currentPage}`;
+    prevBtn.disabled = currentPage === 1;
+    nextBtn.disabled = end >= filteredCFOPs.length;
+  }
+
+  function searchCFOP() {
+    const query = normalizeText(searchInput.value);
+
+    if (query === "") {
+      filteredCFOPs = cfops;
+    } else {
+      filteredCFOPs = cfops.filter(cfop =>
+        normalizeText(cfop["Tabela de CFOP"]).includes(query) ||
+        normalizeText(cfop["Descrição"]).includes(query)
+      );
+    }
+
+    currentPage = 1;
+    displayResults();
+  }
+
+  // Eventos
+  searchInput.addEventListener("input", searchCFOP);
+  prevBtn.addEventListener("click", () => {
+    if (currentPage > 1) {
+      currentPage--;
+      displayResults();
+    }
+  });
+  nextBtn.addEventListener("click", () => {
+    if ((currentPage * itemsPerPage) < filteredCFOPs.length) {
+      currentPage++;
+      displayResults();
+    }
+  });
+
+  // Inicializa
+  displayResults();
+</script>
+</body>
+</html>
